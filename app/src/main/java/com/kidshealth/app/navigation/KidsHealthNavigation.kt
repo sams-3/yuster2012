@@ -2,12 +2,13 @@ package com.kidshealth.app.navigation
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.kidshealth.app.data.model.HealthReport
-import com.kidshealth.app.data.repository.HealthReportRepository
+import com.kidshealth.app.di.DatabaseModule
 import com.kidshealth.app.screens.appointment.AppointmentScreen
 import com.kidshealth.app.screens.auth.CreateAccountScreen
 import com.kidshealth.app.screens.auth.LoginScreen
@@ -18,6 +19,8 @@ import com.kidshealth.app.screens.notifications.NotificationsScreen
 import com.kidshealth.app.screens.reports.HealthReportsScreen
 import com.kidshealth.app.screens.reports.ReportDetailScreen
 import com.kidshealth.app.screens.welcome.WelcomeScreen
+import com.kidshealth.app.viewmodel.HealthReportViewModel
+import com.kidshealth.app.viewmodel.HealthReportViewModelFactory
 import kotlinx.coroutines.launch
 
 @Composable
@@ -25,12 +28,20 @@ fun KidsHealthNavigation(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController()
 ) {
-    // Initialize repositories
-    val healthReportRepository = remember { HealthReportRepository() }
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
+    // Initialize repositories
+    val healthReportRepository = remember { DatabaseModule.provideHealthReportRepository(context) }
+    val appointmentRepository = remember { DatabaseModule.provideAppointmentRepository(context) }
+    
+    // Initialize ViewModels
+    val healthReportViewModel: HealthReportViewModel = viewModel(
+        factory = HealthReportViewModelFactory(healthReportRepository)
+    )
+    
     // Collect health reports
-    val healthReports by healthReportRepository.healthReports.collectAsState(initial = emptyList())
+    val healthReports by healthReportViewModel.healthReports.collectAsState()
 
     NavHost(
         navController = navController,
@@ -123,7 +134,7 @@ fun KidsHealthNavigation(
                 },
                 onReportSaved = { report ->
                     scope.launch {
-                        healthReportRepository.saveHealthReport(report)
+                        healthReportViewModel.saveHealthReport(report)
                         navController.popBackStack()
                     }
                 }
@@ -144,7 +155,13 @@ fun KidsHealthNavigation(
         
         composable(Screen.ReportDetail.route) { backStackEntry ->
             val reportId = backStackEntry.arguments?.getString("reportId")
-            val report = healthReports.find { it.id == reportId }
+            var report by remember { mutableStateOf(null as com.kidshealth.app.data.model.HealthReport?) }
+            
+            LaunchedEffect(reportId) {
+                reportId?.let {
+                    report = healthReportViewModel.getHealthReportById(it)
+                }
+            }
             
             ReportDetailScreen(
                 report = report,

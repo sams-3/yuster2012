@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.kidshealth.app.di.DatabaseModule
+import com.kidshealth.app.di.SupabaseModule
 import com.kidshealth.app.screens.appointment.AppointmentScreen
 import com.kidshealth.app.screens.auth.CreateAccountScreen
 import com.kidshealth.app.screens.auth.LoginScreen
@@ -21,6 +22,8 @@ import com.kidshealth.app.screens.reports.ReportDetailScreen
 import com.kidshealth.app.screens.welcome.WelcomeScreen
 import com.kidshealth.app.viewmodel.HealthReportViewModel
 import com.kidshealth.app.viewmodel.HealthReportViewModelFactory
+import com.kidshealth.app.viewmodel.SupabaseHealthReportViewModel
+import com.kidshealth.app.viewmodel.SupabaseHealthReportViewModelFactory
 import kotlinx.coroutines.launch
 
 @Composable
@@ -31,13 +34,13 @@ fun KidsHealthNavigation(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
-    // Initialize repositories
-    val healthReportRepository = remember { DatabaseModule.provideHealthReportRepository(context) }
-    val appointmentRepository = remember { DatabaseModule.provideAppointmentRepository(context) }
+    // Initialize Supabase repositories
+    val healthReportRepository = remember { SupabaseModule.provideHealthReportRepository() }
+    val appointmentRepository = remember { SupabaseModule.provideAppointmentRepository() }
     
-    // Initialize ViewModels
-    val healthReportViewModel: HealthReportViewModel = viewModel(
-        factory = HealthReportViewModelFactory(healthReportRepository)
+    // Initialize Supabase ViewModels
+    val healthReportViewModel: SupabaseHealthReportViewModel = viewModel(
+        factory = SupabaseHealthReportViewModelFactory(healthReportRepository)
     )
     
     // Collect health reports

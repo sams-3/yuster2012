@@ -5,6 +5,8 @@ import kotlinx.serialization.Serializable
 import com.kidshealth.app.data.model.Appointment
 import com.kidshealth.app.data.model.AppointmentStatus
 import java.util.Date
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Serializable
 data class AppointmentDto(
@@ -32,6 +34,19 @@ data class AppointmentDto(
 )
 
 fun AppointmentDto.toAppointment(): Appointment {
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val parsedDate = try {
+        if (date.contains("-")) {
+            // If it's a date string format (yyyy-MM-dd)
+            dateFormat.parse(date) ?: Date()
+        } else {
+            // If it's a timestamp
+            Date(date.toLong())
+        }
+    } catch (e: Exception) {
+        Date() // Fallback to current date
+    }
+    
     return Appointment(
         id = id,
         patientId = patientId,
@@ -39,7 +54,7 @@ fun AppointmentDto.toAppointment(): Appointment {
         doctorId = doctorId,
         doctorName = doctorName,
         appointmentType = appointmentType,
-        date = Date(date), // You might want to use a proper date parser
+        date = parsedDate,
         time = time,
         status = AppointmentStatus.valueOf(status),
         notes = notes,
@@ -48,6 +63,7 @@ fun AppointmentDto.toAppointment(): Appointment {
 }
 
 fun Appointment.toDto(): AppointmentDto {
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     return AppointmentDto(
         id = id,
         patientId = patientId,
@@ -55,7 +71,7 @@ fun Appointment.toDto(): AppointmentDto {
         doctorId = doctorId,
         doctorName = doctorName,
         appointmentType = appointmentType,
-        date = date.time.toString(), // Convert to timestamp string
+        date = dateFormat.format(date), // Convert to date string format
         time = time,
         status = status.name,
         notes = notes,

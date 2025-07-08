@@ -6,6 +6,8 @@ import com.kidshealth.app.data.model.HealthReport
 import com.kidshealth.app.data.model.ReportStatus
 import com.kidshealth.app.data.model.VitalSigns
 import java.util.Date
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Serializable
 data class HealthReportDto(
@@ -46,14 +48,48 @@ data class HealthReportDto(
 )
 
 fun HealthReportDto.toHealthReport(medications: List<MedicationDto> = emptyList()): HealthReport {
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    
+    val parsedAppointmentDate = try {
+        if (appointmentDate.contains("-")) {
+            dateFormat.parse(appointmentDate) ?: Date()
+        } else {
+            Date(appointmentDate.toLong())
+        }
+    } catch (e: Exception) {
+        Date()
+    }
+    
+    val parsedReportDate = try {
+        if (reportDate.contains("-")) {
+            dateFormat.parse(reportDate) ?: Date()
+        } else {
+            Date(reportDate.toLong())
+        }
+    } catch (e: Exception) {
+        Date()
+    }
+    
+    val parsedFollowUpDate = followUpDate?.let { 
+        try {
+            if (it.contains("-")) {
+                dateFormat.parse(it)
+            } else {
+                Date(it.toLong())
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
     return HealthReport(
         id = id,
         patientId = patientId,
         patientName = patientName,
         doctorId = doctorId,
         doctorName = doctorName,
-        appointmentDate = Date(appointmentDate.toLong()),
-        reportDate = Date(reportDate.toLong()),
+        appointmentDate = parsedAppointmentDate,
+        reportDate = parsedReportDate,
         diagnosis = diagnosis,
         symptoms = if (symptoms.isNotEmpty()) symptoms.split(",").map { it.trim() } else emptyList(),
         treatment = treatment,
@@ -67,25 +103,26 @@ fun HealthReportDto.toHealthReport(medications: List<MedicationDto> = emptyList(
             oxygenSaturation = oxygenSaturation
         ),
         recommendations = recommendations,
-        followUpDate = followUpDate?.let { Date(it.toLong()) },
+        followUpDate = parsedFollowUpDate,
         status = ReportStatus.valueOf(status)
     )
 }
 
 fun HealthReport.toDto(): HealthReportDto {
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     return HealthReportDto(
         id = id,
         patientId = patientId,
         patientName = patientName,
         doctorId = doctorId,
         doctorName = doctorName,
-        appointmentDate = appointmentDate.time.toString(),
-        reportDate = reportDate.time.toString(),
+        appointmentDate = dateFormat.format(appointmentDate),
+        reportDate = dateFormat.format(reportDate),
         diagnosis = diagnosis,
         symptoms = symptoms.joinToString(","),
         treatment = treatment,
         recommendations = recommendations,
-        followUpDate = followUpDate?.time?.toString(),
+        followUpDate = followUpDate?.let { dateFormat.format(it) },
         status = status.name,
         temperature = vitals.temperature,
         bloodPressure = vitals.bloodPressure,

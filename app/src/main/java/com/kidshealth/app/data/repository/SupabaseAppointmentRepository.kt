@@ -7,6 +7,7 @@ import com.kidshealth.app.data.supabase.dto.AppointmentDto
 import com.kidshealth.app.data.supabase.dto.toAppointment
 import com.kidshealth.app.data.supabase.dto.toDto
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -18,7 +19,7 @@ class SupabaseAppointmentRepository {
         try {
             val response = client.from("appointments")
                 .select()
-                .order("date", ascending = false)
+                .order("date", Order.DESCENDING)
                 .decodeList<AppointmentDto>()
             emit(response.map { it.toAppointment() })
         } catch (e: Exception) {
@@ -31,7 +32,7 @@ class SupabaseAppointmentRepository {
             val response = client.from("appointments")
                 .select()
                 .eq("patient_id", patientId)
-                .order("date", ascending = false)
+                .order("date", Order.DESCENDING)
                 .decodeList<AppointmentDto>()
             emit(response.map { it.toAppointment() })
         } catch (e: Exception) {
@@ -44,8 +45,8 @@ class SupabaseAppointmentRepository {
             val response = client.from("appointments")
                 .select()
                 .eq("patient_id", patientId)
-                .`in`("status", listOf("SCHEDULED", "CONFIRMED"))
-                .order("date", ascending = true)
+                .isIn("status", listOf("SCHEDULED", "CONFIRMED"))
+                .order("date", Order.ASCENDING)
                 .decodeList<AppointmentDto>()
             emit(response.map { it.toAppointment() })
         } catch (e: Exception) {

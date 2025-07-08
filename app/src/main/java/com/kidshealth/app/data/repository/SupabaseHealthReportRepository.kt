@@ -8,6 +8,7 @@ import com.kidshealth.app.data.supabase.dto.MedicationDto
 import com.kidshealth.app.data.supabase.dto.toDto
 import com.kidshealth.app.data.supabase.dto.toHealthReport
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.util.UUID
@@ -20,7 +21,7 @@ class SupabaseHealthReportRepository {
         try {
             val reports = client.from("health_reports")
                 .select()
-                .order("report_date", ascending = false)
+                .order("report_date", Order.DESCENDING)
                 .decodeList<HealthReportDto>()
             
             val reportsWithMedications = reports.map { report ->
@@ -42,7 +43,7 @@ class SupabaseHealthReportRepository {
             val reports = client.from("health_reports")
                 .select()
                 .eq("patient_id", patientId)
-                .order("report_date", ascending = false)
+                .order("report_date", Order.DESCENDING)
                 .decodeList<HealthReportDto>()
             
             val reportsWithMedications = reports.map { report ->
@@ -64,7 +65,7 @@ class SupabaseHealthReportRepository {
             val reports = client.from("health_reports")
                 .select()
                 .eq("patient_id", patientId)
-                .order("report_date", ascending = false)
+                .order("report_date", Order.DESCENDING)
                 .limit(limit.toLong())
                 .decodeList<HealthReportDto>()
             

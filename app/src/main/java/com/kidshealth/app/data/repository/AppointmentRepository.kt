@@ -5,6 +5,7 @@ import com.kidshealth.app.data.model.AppointmentStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.*
 
 class AppointmentRepository {
     private val _appointments = MutableStateFlow<List<Appointment>>(emptyList())
@@ -41,6 +42,32 @@ class AppointmentRepository {
         if (index != -1) {
             currentAppointments[index] = currentAppointments[index].copy(status = status)
             _appointments.value = currentAppointments
+        }
+    }
+    
+    suspend fun getAppointmentById(appointmentId: String): Appointment? {
+        return _appointments.value.find { it.id == appointmentId }
+    }
+    
+    suspend fun updateReminderSent(appointmentId: String, reminderSent: Boolean) {
+        val currentAppointments = _appointments.value.toMutableList()
+        val index = currentAppointments.indexOfFirst { it.id == appointmentId }
+        
+        if (index != -1) {
+            currentAppointments[index] = currentAppointments[index].copy(reminderSent = reminderSent)
+            _appointments.value = currentAppointments
+        }
+    }
+    
+    suspend fun getAppointmentsForReminders(): List<Appointment> {
+        val now = Date()
+        val twentyFourHoursFromNow = Date(now.time + 24 * 60 * 60 * 1000)
+        
+        return _appointments.value.filter { appointment ->
+            !appointment.reminderSent &&
+            appointment.status == AppointmentStatus.SCHEDULED &&
+            appointment.date.after(now) &&
+            appointment.date.before(twentyFourHoursFromNow)
         }
     }
 }

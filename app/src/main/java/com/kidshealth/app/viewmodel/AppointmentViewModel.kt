@@ -77,6 +77,25 @@ class AppointmentViewModel(
     fun clearError() {
         _error.value = null
     }
+    
+    suspend fun getAppointmentById(appointmentId: String): Appointment? {
+        return try {
+            repository.getAppointmentById(appointmentId)
+        } catch (e: Exception) {
+            _error.value = e.message
+            null
+        }
+    }
+    
+    fun updateReminderSent(appointmentId: String, reminderSent: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.updateReminderSent(appointmentId, reminderSent)
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
 }
 
 class AppointmentViewModelFactory(

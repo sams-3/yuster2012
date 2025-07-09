@@ -14,22 +14,38 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kidshealth.app.data.model.Appointment
+import com.kidshealth.app.data.model.AppointmentStatus
+import com.kidshealth.app.data.repository.AppointmentRepository
 import com.kidshealth.app.ui.theme.KidsHealthBackground
 import com.kidshealth.app.ui.theme.KidsHealthPrimary
+import com.kidshealth.app.utils.ReminderScheduler
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppointmentScreen(
     onBackClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val appointmentRepository = remember { AppointmentRepository() }
+    val reminderScheduler = remember { ReminderScheduler(context) }
+    
     var selectedDate by remember { mutableStateOf("") }
     var selectedTime by remember { mutableStateOf("") }
     var selectedDoctor by remember { mutableStateOf("") }
     var appointmentType by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -186,27 +202,139 @@ fun AppointmentScreen(
                     // Schedule Button
                     Button(
                         onClick = {
-                            // Handle appointment scheduling
+                            scope.launch {
+                                isLoading = true
+                                try {
+                                    val appointment = createAppointment(
+                                        appointmentType = appointmentType,
+                                        selectedDoctor = selectedDoctor,
+                                        selectedDate = selectedDate,
+                                        selectedTime = selectedTime,
+                                        notes = notes
+                                    )
+                                    
+                                    // Save appointment
+                                    appointmentRepository.saveAppointment(appointment)
+                                    
+                                    // Schedule reminder
+                                    reminderScheduler.scheduleAppointmentReminder(appointment)
+                                    
+                                    showSuccessDialog = true
+                                    
+                                    // Clear form
+                                    selectedDate = ""
+                                    selectedTime = ""
+                                    selectedDoctor = ""
+                                    appointmentType = ""
+                                    notes = ""
+                                    
+                                } catch (e: Exception) {
+                                    errorMessage = "Failed to schedule appointment: ${e.message}"
+                                } finally {
+                                    isLoading = false
+                                }
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = KidsHealthPrimary),
-                        enabled = appointmentType.isNotEmpty() && 
+                        enabled = !isLoading &&
+                                 appointmentType.isNotEmpty() && 
                                  selectedDoctor.isNotEmpty() && 
                                  selectedDate.isNotEmpty() && 
                                  selectedTime.isNotEmpty()
                     ) {
-                        Text(
-                            text = "Schedule Appointment",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White
+                            )
+                        } else {
+                            Text(
+                                text = "Schedule Appointment",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
         }
+        
+        // Success Dialog
+        if (showSuccessDialog) {
+            AlertDialog(
+                onDismissRequest = { showSuccessDialog = false },
+                title = { Text("Appointment Scheduled") },
+                text = { 
+                    Text("Your appointment has been successfully scheduled. You will receive a reminder 24 hours before your appointment.")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { 
+                            showSuccessDialog = false
+                            onBackClick()
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        
+        // Error Dialog
+        errorMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = { errorMessage = null },
+                title = { Text("Error") },
+                text = { Text(message) },
+                confirmButton = {
+                    TextButton(onClick = { errorMessage = null }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+    }
+}
+
+private fun createAppointment(
+    appointmentType: String,
+    selectedDoctor: String,
+    selectedDate: String,
+    selectedTime: String,
+    notes: String
+): Appointment {
+    val dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+    val parsedDate = try {
+        dateFormat.parse(selectedDate) ?: Date()
+    } catch (e: Exception) {
+        Date()
+    }
+    
+    return Appointment(
+        id = UUID.randomUUID().toString(),
+        patientId = "patient_1", // This should come from logged in user
+        patientName = "John Doe", // This should come from logged in user
+        doctorId = getDoctorId(selectedDoctor),
+        doctorName = selectedDoctor,
+        appointmentType = appointmentType,
+        date = parsedDate,
+        time = selectedTime,
+        status = AppointmentStatus.SCHEDULED,
+        notes = notes,
+        reminderSent = false
+    )
+}
+
+private fun getDoctorId(doctorName: String): String {
+    return when (doctorName) {
+        "Dr. Sarah Johnson" -> "doctor_1"
+        "Dr. Michael Chen" -> "doctor_2"
+        "Dr. Emily Davis" -> "doctor_3"
+        else -> "doctor_1"
     }
 }
 

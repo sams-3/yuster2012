@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -20,6 +21,8 @@ import androidx.compose.ui.unit.sp
 import com.kidshealth.app.data.model.*
 import com.kidshealth.app.ui.theme.KidsHealthBackground
 import com.kidshealth.app.ui.theme.KidsHealthPrimary
+import com.kidshealth.app.utils.NotificationHelper
+import com.kidshealth.app.utils.ReminderScheduler
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,6 +33,10 @@ fun DoctorReportFormScreen(
     onBackClick: () -> Unit,
     onReportSaved: (HealthReport) -> Unit
 ) {
+    val context = LocalContext.current
+    val notificationHelper = remember { NotificationHelper(context) }
+    val reminderScheduler = remember { ReminderScheduler(context) }
+    
     var diagnosis by remember { mutableStateOf("") }
     var symptoms by remember { mutableStateOf("") }
     var treatment by remember { mutableStateOf("") }
@@ -326,6 +333,22 @@ fun DoctorReportFormScreen(
                                 status = ReportStatus.COMPLETED
                             )
                             onReportSaved(report)
+                            
+                            // Send notification that report is ready
+                            notificationHelper.sendReportReadyNotification("Dr. Sarah Johnson")
+                            
+                            // Schedule medication reminders if medications are prescribed
+                            if (medications.isNotEmpty()) {
+                                medications.forEach { medication ->
+                                    if (medication.frequency.isNotEmpty()) {
+                                        val reminderTimes = parseMedicationFrequency(medication.frequency)
+                                        reminderScheduler.scheduleMedicationReminder(
+                                            medication.name,
+                                            reminderTimes
+                                        )
+                                    }
+                                }
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -354,6 +377,19 @@ fun DoctorReportFormScreen(
                 showAddMedicationDialog = false
             }
         )
+    }
+}
+
+private fun parseMedicationFrequency(frequency: String): List<String> {
+    return when (frequency.lowercase()) {
+        "once daily", "1x daily" -> listOf("09:00")
+        "twice daily", "2x daily" -> listOf("09:00", "21:00")
+        "three times daily", "3x daily" -> listOf("08:00", "14:00", "20:00")
+        "four times daily", "4x daily" -> listOf("08:00", "12:00", "16:00", "20:00")
+        "every 6 hours" -> listOf("06:00", "12:00", "18:00", "00:00")
+        "every 8 hours" -> listOf("08:00", "16:00", "00:00")
+        "every 12 hours" -> listOf("08:00", "20:00")
+        else -> listOf("09:00") // Default to once daily at 9 AM
     }
 }
 

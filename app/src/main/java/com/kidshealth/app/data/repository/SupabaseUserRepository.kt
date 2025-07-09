@@ -9,6 +9,7 @@ import com.kidshealth.app.data.supabase.dto.toUser
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -29,7 +30,9 @@ class SupabaseUserRepository {
         try {
             val response = client.from("users")
                 .select()
-                .eq("user_type", userType.name)
+                .select(Columns.list("*")) {
+                    eq("user_type", userType.name)
+                }
                 .decodeList<UserDto>()
             emit(response.map { it.toUser() })
         } catch (e: Exception) {
@@ -41,7 +44,9 @@ class SupabaseUserRepository {
         return try {
             val response = client.from("users")
                 .select()
-                .eq("id", userId)
+                .select(Columns.list("*")) {
+                    eq("id", userId)
+                }
                 .decodeSingleOrNull<UserDto>()
             response?.toUser()
         } catch (e: Exception) {
@@ -53,7 +58,9 @@ class SupabaseUserRepository {
         return try {
             val response = client.from("users")
                 .select()
-                .eq("email", email)
+                .select(Columns.list("*")) {
+                    eq("email", email)
+                }
                 .decodeSingleOrNull<UserDto>()
             response?.toUser()
         } catch (e: Exception) {
@@ -72,8 +79,9 @@ class SupabaseUserRepository {
     suspend fun updateUser(user: User) {
         try {
             client.from("users")
-                .update(user.toDto())
-                .eq("id", user.id)
+                .update(user.toDto()) {
+                    eq("id", user.id)
+                }
         } catch (e: Exception) {
             throw e
         }
@@ -82,8 +90,9 @@ class SupabaseUserRepository {
     suspend fun deleteUser(userId: String) {
         try {
             client.from("users")
-                .delete()
-                .eq("id", userId)
+                .delete {
+                    eq("id", userId)
+                }
         } catch (e: Exception) {
             throw e
         }

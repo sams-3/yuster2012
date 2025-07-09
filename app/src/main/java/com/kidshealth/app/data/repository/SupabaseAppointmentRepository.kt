@@ -7,7 +7,7 @@ import com.kidshealth.app.data.supabase.dto.AppointmentDto
 import com.kidshealth.app.data.supabase.dto.toAppointment
 import com.kidshealth.app.data.supabase.dto.toDto
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -19,7 +19,7 @@ class SupabaseAppointmentRepository {
         try {
             val response = client.from("appointments")
                 .select()
-                .order("date", Order.DESCENDING)
+                .order("date", ascending = false)
                 .decodeList<AppointmentDto>()
             emit(response.map { it.toAppointment() })
         } catch (e: Exception) {
@@ -31,8 +31,10 @@ class SupabaseAppointmentRepository {
         try {
             val response = client.from("appointments")
                 .select()
-                .eq("patient_id", patientId)
-                .order("date", Order.DESCENDING)
+                .select(Columns.list("*")) {
+                    eq("patient_id", patientId)
+                }
+                .order("date", ascending = false)
                 .decodeList<AppointmentDto>()
             emit(response.map { it.toAppointment() })
         } catch (e: Exception) {
@@ -44,9 +46,11 @@ class SupabaseAppointmentRepository {
         try {
             val response = client.from("appointments")
                 .select()
-                .eq("patient_id", patientId)
-                .isIn("status", listOf("SCHEDULED", "CONFIRMED"))
-                .order("date", Order.ASCENDING)
+                .select(Columns.list("*")) {
+                    eq("patient_id", patientId)
+                    `in`("status", listOf("SCHEDULED", "CONFIRMED"))
+                }
+                .order("date", ascending = true)
                 .decodeList<AppointmentDto>()
             emit(response.map { it.toAppointment() })
         } catch (e: Exception) {
@@ -58,7 +62,9 @@ class SupabaseAppointmentRepository {
         return try {
             val response = client.from("appointments")
                 .select()
-                .eq("id", appointmentId)
+                .select(Columns.list("*")) {
+                    eq("id", appointmentId)
+                }
                 .decodeSingleOrNull<AppointmentDto>()
             response?.toAppointment()
         } catch (e: Exception) {
@@ -77,8 +83,9 @@ class SupabaseAppointmentRepository {
     suspend fun updateAppointment(appointment: Appointment) {
         try {
             client.from("appointments")
-                .update(appointment.toDto())
-                .eq("id", appointment.id)
+                .update(appointment.toDto()) {
+                    eq("id", appointment.id)
+                }
         } catch (e: Exception) {
             throw e
         }
@@ -87,8 +94,9 @@ class SupabaseAppointmentRepository {
     suspend fun updateAppointmentStatus(appointmentId: String, status: AppointmentStatus) {
         try {
             client.from("appointments")
-                .update(mapOf("status" to status.name))
-                .eq("id", appointmentId)
+                .update(mapOf("status" to status.name)) {
+                    eq("id", appointmentId)
+                }
         } catch (e: Exception) {
             throw e
         }
@@ -97,8 +105,9 @@ class SupabaseAppointmentRepository {
     suspend fun updateReminderSent(appointmentId: String, reminderSent: Boolean) {
         try {
             client.from("appointments")
-                .update(mapOf("reminder_sent" to reminderSent))
-                .eq("id", appointmentId)
+                .update(mapOf("reminder_sent" to reminderSent)) {
+                    eq("id", appointmentId)
+                }
         } catch (e: Exception) {
             throw e
         }
@@ -107,8 +116,9 @@ class SupabaseAppointmentRepository {
     suspend fun deleteAppointment(appointmentId: String) {
         try {
             client.from("appointments")
-                .delete()
-                .eq("id", appointmentId)
+                .delete {
+                    eq("id", appointmentId)
+                }
         } catch (e: Exception) {
             throw e
         }

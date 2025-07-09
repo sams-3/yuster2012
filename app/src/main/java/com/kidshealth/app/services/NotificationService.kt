@@ -7,10 +7,12 @@ import android.app.NotificationManager
 import android.content.Intent
 import android.os.IBinder
 import android.os.Build
-import androidx.lifecycle.lifecycleScope
 import androidx.core.app.NotificationCompat
 import com.kidshealth.app.data.repository.AppointmentRepository
 import com.kidshealth.app.utils.NotificationHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -26,6 +28,7 @@ class NotificationService : Service() {
     private lateinit var notificationHelper: NotificationHelper
     private lateinit var appointmentRepository: AppointmentRepository
     private var isRunning = false
+    private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     
     override fun onCreate() {
         super.onCreate()
@@ -72,7 +75,7 @@ class NotificationService : Service() {
     }
     
     private fun startReminderChecking() {
-        lifecycleScope.launch {
+        serviceScope.launch {
             while (isRunning) {
                 checkAndSendReminders()
                 delay(60 * 60 * 1000) // Check every hour
